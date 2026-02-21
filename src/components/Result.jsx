@@ -13,8 +13,14 @@ export default function Result({ onRestart }) {
   const [glowPulse, setGlowPulse] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   
   const resultCardRef = useRef(null);
+  const audioRef = useRef(null);
+
+  // Calculate red and green percentages
+  const redPercentage = score;
+  const greenPercentage = 100 - score;
 
   // Update window size on resize
   useEffect(() => {
@@ -38,7 +44,7 @@ export default function Result({ onRestart }) {
       ],
       green: [
         `${name}, green flag energy 🌱`,
-        "You pass the vibe check ✔️lessgo mommy",
+        "You pass the vibe check ✔️",
         "Certified safe human 🫶",
       ],
     };
@@ -60,6 +66,7 @@ export default function Result({ onRestart }) {
         textGlow: "drop-shadow-[0_0_12px_rgba(255,68,68,0.8)]",
         shake: "animate-[shake_0.4s_ease-in-out_2]",
         borderColor: "border-red-500/30",
+        audioUrl: "/audio/eww-brother.mp3", // Red flag audio
       };
     } else if (score >= 40) {
       res = {
@@ -73,6 +80,7 @@ export default function Result({ onRestart }) {
         glow: "shadow-[0_0_60px_rgba(255,165,0,0.3)]",
         textGlow: "drop-shadow-[0_0_12px_rgba(255,165,0,0.8)]",
         borderColor: "border-orange-500/30",
+        audioUrl: "/audio/what-makes-you-beautiful.mp3", // Mid zone audio
       };
     } else {
       res = {
@@ -87,13 +95,38 @@ export default function Result({ onRestart }) {
         textGlow: "drop-shadow-[0_0_12px_rgba(62,255,227,0.8)]",
         greenFlag: true,
         borderColor: "border-emerald-400/30",
+        audioUrl: "/audio/espresso.mp3", // Green flag audio
       };
     }
 
     setResult(res);
     setTimeout(() => setAnimate(true), 200);
     setTimeout(() => setGlowPulse(true), 400);
+
+    // Play audio after animations
+    if (res.audioUrl) {
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play().catch(err => {
+            console.log("Audio autoplay blocked, user can tap to play");
+          });
+        }
+      }, 800);
+    }
   }, [score, name]);
+
+  // Toggle mute/unmute
+  const toggleMute = () => {
+    if (audioRef.current) {
+      if (isMuted) {
+        audioRef.current.play();
+        setIsMuted(false);
+      } else {
+        audioRef.current.pause();
+        setIsMuted(true);
+      }
+    }
+  };
 
   // Screenshot and share function
   const handleShare = async () => {
@@ -102,18 +135,15 @@ export default function Result({ onRestart }) {
     try {
       setIsCapturing(true);
 
-      // Wait a moment for any animations to settle
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Capture the result card as canvas
       const canvas = await html2canvas(resultCardRef.current, {
         backgroundColor: null,
-        scale: 2, // Higher quality
+        scale: 2,
         logging: false,
         useCORS: true,
       });
 
-      // Convert canvas to blob
       canvas.toBlob(async (blob) => {
         if (!blob) {
           alert("Failed to create image");
@@ -121,7 +151,6 @@ export default function Result({ onRestart }) {
           return;
         }
 
-        // Try native share API first (mobile)
         if (navigator.share && navigator.canShare) {
           try {
             const file = new File([blob], 'my-flag-status.png', { type: 'image/png' });
@@ -130,7 +159,7 @@ export default function Result({ onRestart }) {
               await navigator.share({
                 files: [file],
                 title: 'My FLAG Status',
-                text: `I got ${score}/100 on the FLAG scan! ${result.label}`,
+                text: `I got ${redPercentage}% Red Flag on the FLAG scan! ${result.label}`,
               });
               setIsCapturing(false);
               return;
@@ -140,7 +169,6 @@ export default function Result({ onRestart }) {
           }
         }
 
-        // Fallback: Download the image
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -151,8 +179,6 @@ export default function Result({ onRestart }) {
         URL.revokeObjectURL(url);
         
         setIsCapturing(false);
-        
-        // Show success message
         alert("Image saved! Check your downloads 📸");
       }, 'image/png');
 
@@ -165,6 +191,22 @@ export default function Result({ onRestart }) {
 
   return (
     <div className={`min-h-screen flex items-center justify-center ${result.bg} relative overflow-hidden py-8`}>
+      {/* Audio element - loops continuously */}
+      {result.audioUrl && (
+        <audio ref={audioRef} src={result.audioUrl} preload="auto" loop />
+      )}
+
+      {/* Mute/Unmute Button - Top Right Corner */}
+      {result.audioUrl && (
+        <button
+          onClick={toggleMute}
+          className="absolute top-6 right-6 z-30 w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/70 backdrop-blur-xl border-2 border-white/50 shadow-lg flex items-center justify-center text-2xl md:text-3xl hover:scale-110 active:scale-95 transition-all duration-300"
+          aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+        >
+          {isMuted ? '🔇' : '🔊'}
+        </button>
+      )}
+
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-20">
         <div 
@@ -185,13 +227,13 @@ export default function Result({ onRestart }) {
         <div className="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[scan_4s_linear_infinite]"></div>
       </div>
 
-      {/* Result Card - This will be captured */}
+      {/* Result Card */}
       <div 
         ref={resultCardRef}
         className={`relative z-10 p-6 md:p-8 rounded-3xl w-[90%] max-w-[420px] ${result.cardBg} backdrop-blur-2xl border-2 ${result.borderColor} ${result.shake} ${result.glow} transition-all duration-700 ${animate ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
       >
         
-        {/* Header with custom font */}
+        {/* Header */}
         <div className="text-center mb-4">
           <h1 className="text-3xl md:text-4xl font-black italic text-white mb-2 tracking-wider" style={{ fontFamily: "'Bebas Neue', 'Arial Black', sans-serif", letterSpacing: '0.1em' }}>
             FLAG STATUS
@@ -206,10 +248,9 @@ export default function Result({ onRestart }) {
           </div>
         </div>
 
-        {/* Main score display with emoji */}
+        {/* Main emoji and label */}
         <div className={`text-center mb-5 transition-all duration-1000 ${glowPulse ? 'scale-100' : 'scale-90'}`}>
           <div className="relative inline-block">
-            {/* Pulsing glow effect */}
             <div 
               className="absolute inset-0 rounded-full blur-2xl opacity-40 animate-pulse"
               style={{ background: `linear-gradient(to right, ${result.barColor || '#ff0000'}, ${result.barColorEnd || '#ff6b6b'})` }}
@@ -227,40 +268,24 @@ export default function Result({ onRestart }) {
           </div>
         </div>
 
-        {/* Score number with circular progress */}
-        <div className="relative w-36 h-36 mx-auto mb-5">
-          {/* Background circle */}
-          <svg className="w-full h-full transform -rotate-90">
-            <circle
-              cx="72"
-              cy="72"
-              r="65"
-              stroke="rgba(255,255,255,0.1)"
-              strokeWidth="10"
-              fill="none"
-            />
-            {/* Animated progress circle */}
-            <circle
-              cx="72"
-              cy="72"
-              r="65"
-              stroke={result.barColor || '#ff0000'}
-              strokeWidth="10"
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 65}`}
-              strokeDashoffset={animate ? `${2 * Math.PI * 65 * (1 - score / 100)}` : `${2 * Math.PI * 65}`}
-              className="transition-all duration-2000 ease-out"
-              style={{ filter: `drop-shadow(0 0 8px ${result.barColor})` }}
-            />
-          </svg>
-          
-          {/* Score text in center */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className={`text-5xl font-black ${result.textGlow} text-white`} style={{ fontFamily: "'Bebas Neue', monospace" }}>
-              {score}
+        {/* Red % and Green % Display */}
+        <div className="mb-5">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Red % */}
+            <div className="bg-red-500/20 backdrop-blur-xl rounded-2xl p-4 text-center border-2 border-red-500/40">
+              <p className="text-red-400 text-xs mb-1 font-bold">🚩 RED FLAG</p>
+              <p className="text-red-300 font-black text-3xl" style={{ fontFamily: "'Bebas Neue', monospace" }}>
+                {redPercentage}%
+              </p>
             </div>
-            <div className="text-lg text-white/60 font-bold">/ 100</div>
+
+            {/* Green % */}
+            <div className="bg-green-500/20 backdrop-blur-xl rounded-2xl p-4 text-center border-2 border-green-500/40">
+              <p className="text-green-400 text-xs mb-1 font-bold">💚 GREEN FLAG</p>
+              <p className="text-green-300 font-black text-3xl" style={{ fontFamily: "'Bebas Neue', monospace" }}>
+                {greenPercentage}%
+              </p>
+            </div>
           </div>
         </div>
 
@@ -278,7 +303,7 @@ export default function Result({ onRestart }) {
           </div>
         </div>
 
-        {/* Quote with better styling */}
+        {/* Quote */}
         <div className="mb-6 px-2">
           <div className="relative">
             <div className="absolute -left-1 -top-1 text-4xl text-white/10 font-serif">"</div>
@@ -322,7 +347,7 @@ export default function Result({ onRestart }) {
           </button>
         </div>
 
-        {/* Decorative corner elements */}
+        {/* Decorative corners */}
         <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-white/20"></div>
         <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-white/20"></div>
         <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-white/20"></div>

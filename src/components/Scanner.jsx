@@ -38,8 +38,6 @@ export default function Scanner() {
           
           videoRef.current.onloadedmetadata = async () => {
             videoRef.current.play();
-            
-            // Initialize MediaPipe Face Detection
             await loadFaceDetection();
           };
         }
@@ -50,7 +48,6 @@ export default function Scanner() {
 
     async function loadFaceDetection() {
       try {
-        // Use @mediapipe/face_detection
         const { FaceDetection } = await import('@mediapipe/face_detection');
         const { Camera } = await import('@mediapipe/camera_utils');
 
@@ -77,7 +74,7 @@ export default function Scanner() {
 
         camera.start();
       } catch (error) {
-        console.log("Face detection not available, using fallback");
+        console.log("Face detection not available");
       }
     }
 
@@ -91,7 +88,6 @@ export default function Scanner() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (results.detections && results.detections.length > 0) {
@@ -100,7 +96,6 @@ export default function Scanner() {
         results.detections.forEach((detection) => {
           const box = detection.boundingBox;
           
-          // Calculate box dimensions
           const x = box.xCenter * canvas.width - (box.width * canvas.width) / 2;
           const y = box.yCenter * canvas.height - (box.height * canvas.height) / 2;
           const width = box.width * canvas.width;
@@ -111,7 +106,6 @@ export default function Scanner() {
           ctx.lineWidth = 3;
           ctx.setLineDash([8, 4]);
           
-          // Rounded rect
           const radius = 20;
           ctx.beginPath();
           ctx.moveTo(x + radius, y);
@@ -126,13 +120,13 @@ export default function Scanner() {
           ctx.closePath();
           ctx.stroke();
 
-          // Draw corner L-brackets
+          // Draw corner L-brackets - THICKER for mobile visibility
           ctx.setLineDash([]);
           ctx.strokeStyle = '#FF2E63';
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 5; // Increased from 4
           ctx.lineCap = 'round';
 
-          const cornerSize = 30;
+          const cornerSize = 35; // Increased from 30
           
           // Top left
           ctx.beginPath();
@@ -167,25 +161,25 @@ export default function Scanner() {
           const centerY = y + height / 2;
           
           ctx.strokeStyle = '#FF6B9D';
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 3; // Increased from 2
           ctx.setLineDash([]);
 
           // Horizontal line
           ctx.beginPath();
-          ctx.moveTo(centerX - 10, centerY);
-          ctx.lineTo(centerX + 10, centerY);
+          ctx.moveTo(centerX - 12, centerY);
+          ctx.lineTo(centerX + 12, centerY);
           ctx.stroke();
 
           // Vertical line
           ctx.beginPath();
-          ctx.moveTo(centerX, centerY - 10);
-          ctx.lineTo(centerX, centerY + 10);
+          ctx.moveTo(centerX, centerY - 12);
+          ctx.lineTo(centerX, centerY + 12);
           ctx.stroke();
 
           // Center dot
           ctx.fillStyle = '#FF6B9D';
           ctx.beginPath();
-          ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI);
+          ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
           ctx.fill();
         });
       } else {
@@ -195,10 +189,8 @@ export default function Scanner() {
 
     startCamera();
 
-    // Show doodles after 300ms
     setTimeout(() => setShowDoodles(true), 300);
 
-    // Progress animation
     const progressInterval = setInterval(() => {
       setScanProgress(prev => {
         if (prev >= 100) return 100;
@@ -206,12 +198,10 @@ export default function Scanner() {
       });
     }, 100);
 
-    // Cycle through messages
     const messageInterval = setInterval(() => {
       setCurrentMessage(prev => (prev + 1) % scanMessages.length);
     }, 1200);
 
-    // Navigate after 7 seconds
     const timer = setTimeout(() => {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
@@ -235,7 +225,7 @@ export default function Scanner() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
-      {/* Camera feed with soft overlay - BRIGHTER */}
+      {/* Camera feed */}
       <video 
         ref={videoRef} 
         autoPlay 
@@ -244,41 +234,35 @@ export default function Scanner() {
         className="absolute inset-0 w-full h-full object-cover opacity-95"
       />
 
-      {/* Canvas for face detection overlay */}
+      {/* Canvas for face detection */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ mixBlendMode: 'normal' }}
       />
 
-      {/* Soft pastel overlay - REDUCED OPACITY */}
+      {/* Soft pastel overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-pink-100/20 via-purple-100/20 to-blue-100/20 backdrop-blur-[1px]"></div>
 
-      {/* Floating doodle elements */}
+      {/* Floating doodles */}
       {showDoodles && (
         <div className="absolute inset-0 pointer-events-none z-10">
-          {/* Stars */}
           <div className="star star-1">⭐</div>
           <div className="star star-2">✨</div>
           <div className="star star-3">💫</div>
           <div className="star star-4">⭐</div>
           
-          {/* Hearts */}
           <div className="heart heart-1">💕</div>
           <div className="heart heart-2">💗</div>
           <div className="heart heart-3">💖</div>
           
-          {/* Sparkles */}
           <div className="sparkle sparkle-1">✨</div>
           <div className="sparkle sparkle-2">🌟</div>
           <div className="sparkle sparkle-3">💫</div>
           
-          {/* Flowers */}
           <div className="flower flower-1">🌸</div>
           <div className="flower flower-2">🌺</div>
           <div className="flower flower-3">🌼</div>
           
-          {/* Butterflies */}
           <div className="butterfly butterfly-1">🦋</div>
           <div className="butterfly butterfly-2">🦋</div>
         </div>
@@ -287,11 +271,11 @@ export default function Scanner() {
       {/* Soft scanning wave */}
       <div className="scan-wave"></div>
 
-      {/* Top - cute status */}
-      <div className="absolute top-0 left-0 right-0 p-6 z-20">
+      {/* Top status */}
+      <div className="absolute top-0 left-0 right-0 p-4 md:p-6 z-20">
         <div className="text-center">
-          <div className="inline-block px-6 py-3 bg-white/70 backdrop-blur-xl rounded-full shadow-lg border-2 border-pink-200/50">
-            <p className="text-pink-600 font-medium text-sm flex items-center gap-2 justify-center">
+          <div className="inline-block px-5 py-2.5 bg-white/70 backdrop-blur-xl rounded-full shadow-lg border-2 border-pink-200/50">
+            <p className="text-pink-600 font-medium text-xs md:text-sm flex items-center gap-2 justify-center">
               <span className={`w-2 h-2 ${faceDetected ? 'bg-green-500' : 'bg-pink-500'} rounded-full animate-pulse`}></span>
               {faceDetected ? 'Face detected!' : 'Scanning your vibes...'}
             </p>
@@ -299,26 +283,30 @@ export default function Scanner() {
         </div>
       </div>
 
-      {/* Center - Main message */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-20">
-        <div className="bg-white/70 backdrop-blur-xl px-8 py-4 rounded-full border-2 border-pink-200/50 shadow-xl">
-          <p className="text-pink-600 font-semibold text-lg">
-            {scanMessages[currentMessage]}
-          </p>
-        </div>
+      {/* Center message - NO OVAL, JUST TEXT */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-20 px-4">
+        <p 
+          className="text-pink-600 font-bold text-lg md:text-2xl"
+          style={{ 
+            textShadow: '0 2px 12px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.7)',
+            WebkitTextStroke: '0.5px rgba(255,255,255,0.5)'
+          }}
+        >
+          {scanMessages[currentMessage]}
+        </p>
       </div>
 
-      {/* Bottom - Progress with modern design */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
+      {/* Bottom HUD - FIXED FOR MOBILE */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 z-20 pb-safe">
         <div className="max-w-md mx-auto">
           {/* Progress bar */}
-          <div className="mb-4">
+          <div className="mb-3">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-pink-600 font-medium text-sm">✨ Progress</span>
-              <span className="text-pink-600 font-bold text-sm">{Math.floor(scanProgress)}%</span>
+              <span className="text-pink-600 font-medium text-xs md:text-sm">✨ Progress</span>
+              <span className="text-pink-600 font-bold text-xs md:text-sm">{Math.floor(scanProgress)}%</span>
             </div>
             
-            <div className="relative h-3 bg-white/70 backdrop-blur-xl rounded-full overflow-hidden border-2 border-pink-200/50 shadow-inner">
+            <div className="relative h-2.5 md:h-3 bg-white/70 backdrop-blur-xl rounded-full overflow-hidden border-2 border-pink-200/50 shadow-inner">
               <div 
                 className="h-full bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 transition-all duration-300 ease-out relative rounded-full"
                 style={{ width: `${scanProgress}%` }}
@@ -326,9 +314,8 @@ export default function Scanner() {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer-soft"></div>
               </div>
               
-              {/* Cute marker at progress point */}
               <div 
-                className="absolute top-1/2 -translate-y-1/2 text-xl transition-all duration-300"
+                className="absolute top-1/2 -translate-y-1/2 text-base md:text-xl transition-all duration-300"
                 style={{ left: `${Math.min(scanProgress, 95)}%` }}
               >
                 🌟
@@ -336,23 +323,23 @@ export default function Scanner() {
             </div>
           </div>
 
-          {/* Modern info cards */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-3 text-center border-2 border-pink-200/50 shadow-lg transform hover:scale-105 transition-transform">
-              <p className="text-pink-500 text-xs mb-1">✨ Vibes</p>
-              <p className="text-pink-600 font-bold text-sm">
+          {/* Info cards - SMALLER FOR MOBILE */}
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="bg-white/70 backdrop-blur-xl rounded-xl md:rounded-2xl p-2 md:p-3 text-center border-2 border-pink-200/50 shadow-lg">
+              <p className="text-pink-500 text-[10px] md:text-xs mb-0.5 md:mb-1">✨ Vibes</p>
+              <p className="text-pink-600 font-bold text-xs md:text-sm">
                 {Math.floor(scanProgress / 10)}/10
               </p>
             </div>
-            <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-3 text-center border-2 border-purple-200/50 shadow-lg transform hover:scale-105 transition-transform">
-              <p className="text-purple-500 text-xs mb-1">💕 Energy</p>
-              <p className="text-purple-600 font-bold text-sm">
+            <div className="bg-white/70 backdrop-blur-xl rounded-xl md:rounded-2xl p-2 md:p-3 text-center border-2 border-purple-200/50 shadow-lg">
+              <p className="text-purple-500 text-[10px] md:text-xs mb-0.5 md:mb-1">💕 Energy</p>
+              <p className="text-purple-600 font-bold text-xs md:text-sm">
                 {Math.floor(scanProgress)}%
               </p>
             </div>
-            <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-3 text-center border-2 border-blue-200/50 shadow-lg transform hover:scale-105 transition-transform">
-              <p className="text-blue-500 text-xs mb-1">🌸 Aura</p>
-              <p className="text-blue-600 font-bold text-sm">
+            <div className="bg-white/70 backdrop-blur-xl rounded-xl md:rounded-2xl p-2 md:p-3 text-center border-2 border-blue-200/50 shadow-lg">
+              <p className="text-blue-500 text-[10px] md:text-xs mb-0.5 md:mb-1">🌸 Aura</p>
+              <p className="text-blue-600 font-bold text-xs md:text-sm">
                 {faceDetected ? '★★★★★' : '★★★★☆'}
               </p>
             </div>
@@ -361,7 +348,6 @@ export default function Scanner() {
       </div>
 
       <style jsx>{`
-        /* Soft scanning wave */
         .scan-wave {
           position: absolute;
           top: 0;
@@ -385,11 +371,16 @@ export default function Scanner() {
           50% { transform: translateY(50vh); opacity: 0.8; }
         }
 
-        /* Floating doodles */
         .star, .heart, .sparkle, .flower, .butterfly {
           position: absolute;
-          font-size: 24px;
+          font-size: 20px;
           animation: floatDoodle 4s ease-in-out infinite;
+        }
+
+        @media (min-width: 768px) {
+          .star, .heart, .sparkle, .flower, .butterfly {
+            font-size: 24px;
+          }
         }
 
         .star-1 { top: 15%; left: 10%; animation-delay: 0s; }
@@ -431,7 +422,6 @@ export default function Scanner() {
           }
         }
 
-        /* Soft shimmer */
         @keyframes shimmer-soft {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(200%); }
@@ -441,11 +431,9 @@ export default function Scanner() {
           animation: shimmer-soft 3s infinite;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-          .star, .heart, .sparkle, .flower, .butterfly {
-            font-size: 20px;
-          }
+        /* Safe area for mobile notches */
+        .pb-safe {
+          padding-bottom: max(1rem, env(safe-area-inset-bottom));
         }
       `}</style>
     </div>
